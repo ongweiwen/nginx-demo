@@ -1,20 +1,33 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "gsafetyweiwen/nginx-demo"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
     stages {
 
         stage('Checkout') {
             steps {
-                echo 'Downloading source code from GitHub...'
+                echo 'Checking out source code...'
             }
         }
 
-        stage('Show Files') {
+        stage('Build Docker Image') {
             steps {
-                sh 'pwd'
-                sh 'ls -la'
+                sh '''
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
             }
         }
 
+        stage('Verify Image') {
+            steps {
+                sh '''
+                    docker images | grep nginx-demo
+                '''
+            }
+        }
     }
 }
