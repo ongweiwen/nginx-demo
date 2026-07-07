@@ -10,22 +10,38 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo 'Checking out source code...'
+                checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 '''
             }
         }
 
-        stage('Verify Image') {
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login \
+                    -u "$DOCKER_USER" \
+                    --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Push Image') {
             steps {
                 sh '''
-                    docker images | grep nginx-demo
+                docker push ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
