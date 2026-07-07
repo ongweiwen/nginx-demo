@@ -44,16 +44,34 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy') {
             steps {
                 sh '''
                 kubectl set image deployment/nginx-demo \
                 nginx-demo=${IMAGE_NAME}:${IMAGE_TAG}
 
-                kubectl rollout status deployment/nginx-demo
+                kubectl rollout status deployment/nginx-demo --timeout=120s
                 '''
             }
         }
 
     }
+
+    post {
+
+    success {
+        echo "Deployment Successful"
+    }
+
+    failure {
+
+        sh '''
+        kubectl rollout undo deployment/nginx-demo
+        '''
+
+        echo "Rollback Completed"
+    }
+
+    }
+
 }
