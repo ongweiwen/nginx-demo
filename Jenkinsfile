@@ -30,9 +30,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    echo "$DOCKER_PASS" | docker login \
-                    -u "$DOCKER_USER" \
-                    --password-stdin
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -45,5 +43,17 @@ pipeline {
                 '''
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                kubectl set image deployment/nginx-demo \
+                nginx-demo=${IMAGE_NAME}:${IMAGE_TAG}
+
+                kubectl rollout status deployment/nginx-demo
+                '''
+            }
+        }
+
     }
 }
