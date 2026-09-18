@@ -1,3 +1,0 @@
-containers:
-- name: nginx-demo
-  image: gsafetyweiwen/nginx-demo:latest
