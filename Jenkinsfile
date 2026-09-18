@@ -17,7 +17,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
-                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    docker build \
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 '''
             }
         }
@@ -30,7 +31,8 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        echo "$DOCKER_PASS" | \
+                        docker login -u "$DOCKER_USER" --password-stdin
                     '''
                 }
             }
@@ -39,39 +41,60 @@ pipeline {
         stage('Push Image') {
             steps {
                 sh '''
-                docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    docker push ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy DEV') {
             steps {
                 sh '''
-                kubectl set image deployment/nginx-demo \
-                nginx-demo=${IMAGE_NAME}:${IMAGE_TAG}
+                    helm upgrade --install nginx-demo-dev \
+                        ./nginx-demo-chart \
+                        -n dev \
+                        --create-namespace \
+                        -f ./nginx-demo-chart/values-dev.yaml \
+                        --set image.repository=${IMAGE_NAME} \
+                        --set image.tag=${IMAGE_TAG}
 
-                kubectl rollout status deployment/nginx-demo --timeout=120s
+                    kubectl rollout status \
+                        deployment/nginx-demo-dev-nginx-demo-chart \
+                        -n dev \
+                        --timeout=120s
                 '''
             }
         }
 
+        stage('Deploy UAT') {
+            steps {
+                input message: 'Deploy to UAT?'
+
+                sh '''
+                    helm upgrade --install nginx-demo-uat \
+                        ./nginx-demo-chart \
+                        -n uat \
+                        --create-namespace \
+                        -f ./nginx-demo-chart/values-uat.yaml \
+                        --set image.repository=${IMAGE_NAME} \
+                        --set image.tag=${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Deploy PROD') {
+            steps {
+                input message: 'Deploy to PROD?'
+
+                sh '''
+                    helm upgrade --install nginx-demo-prod \
+                        ./nginx-demo-chart \
+                        -n prod \
+                        --create-namespace \
+                        -f ./nginx-demo-chart/values-prod.yaml \
+                        --set image.repository=${IMAGE_NAME} \
+                        --set image.tag=${IMAGE_TAG}
+                '''
+            }
+        }
     }
-
-    post {
-
-    success {
-        echo "Deployment Successful"
-    }
-
-    failure {
-
-        sh '''
-        kubectl rollout undo deployment/nginx-demo
-        '''
-
-        echo "Rollback Completed"
-    }
-
-    }
-
 }
