@@ -1,3 +1,4 @@
+```groovy
 pipeline {
     agent any
 
@@ -8,17 +9,10 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh '''
-                    docker build \
-                        -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 '''
             }
         }
@@ -31,8 +25,9 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh '''
-                        echo "$DOCKER_PASS" | \
-                        docker login -u "$DOCKER_USER" --password-stdin
+                        echo "$DOCKER_PASS" | docker login \
+                            -u "$DOCKER_USER" \
+                            --password-stdin
                     '''
                 }
             }
@@ -64,37 +59,16 @@ pipeline {
                 '''
             }
         }
+    }
 
-        stage('Deploy UAT') {
-            steps {
-                input message: 'Deploy to UAT?'
-
-                sh '''
-                    helm upgrade --install nginx-demo-uat \
-                        ./nginx-demo-chart \
-                        -n uat \
-                        --create-namespace \
-                        -f ./nginx-demo-chart/values-uat.yaml \
-                        --set image.repository=${IMAGE_NAME} \
-                        --set image.tag=${IMAGE_TAG}
-                '''
-            }
+    post {
+        success {
+            echo "DEV deployment successful"
         }
 
-        stage('Deploy PROD') {
-            steps {
-                input message: 'Deploy to PROD?'
-
-                sh '''
-                    helm upgrade --install nginx-demo-prod \
-                        ./nginx-demo-chart \
-                        -n prod \
-                        --create-namespace \
-                        -f ./nginx-demo-chart/values-prod.yaml \
-                        --set image.repository=${IMAGE_NAME} \
-                        --set image.tag=${IMAGE_TAG}
-                '''
-            }
+        failure {
+            echo "Pipeline failed"
         }
     }
 }
+```
