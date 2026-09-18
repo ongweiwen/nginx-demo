@@ -1,20 +1,36 @@
-containers:
-- name: nginx-demo
-  image: gsafetyweiwen/nginx-demo:latest
-
-  ports:
-  - containerPort: 80
-
-  readinessProbe:
-    httpGet:
-      path: /
-      port: 80
-    initialDelaySeconds: 5
-    periodSeconds: 5
-
-  livenessProbe:
-    httpGet:
-      path: /
-      port: 80
-    initialDelaySeconds: 15
-    periodSeconds: 10
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nginx-demo-chart.fullname" . }}
+  labels:
+    {{- include "nginx-demo-chart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "nginx-demo-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nginx-demo-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: nginx-demo
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
