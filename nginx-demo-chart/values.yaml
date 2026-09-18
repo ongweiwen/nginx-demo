@@ -1,0 +1,10 @@
+replicaCount: 2
+
+image:
+  repository: gsafetyweiwen/nginx-demo
+  tag: "latest"
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
